@@ -11,7 +11,7 @@
 <style>
 body{font-family:Arial;margin:0;padding:15px;background:#fff}
 h2{text-align:center}
-input,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:16px}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:16px}
 button{background:#25D366;color:#fff;border:none;font-weight:bold}
 .product{border:1px solid #ddd;padding:8px;margin:8px 0;border-radius:10px}
 img{max-width:100%;border-radius:8px;margin-top:5px}
@@ -22,8 +22,15 @@ img{max-width:100%;border-radius:8px;margin-top:5px}
 <h2>Vees Thrift Product Sender</h2>
 
 <input type="text" id="pname" placeholder="Product Name">
-<input type="text" id="psize" placeholder="Size">
+<input type="text" id="psize" placeholder="Size (number, letter, or anything)">
 <input type="number" id="pprice" placeholder="Price">
+
+<select id="pcurrency">
+  <option value="ZMW" selected>ZMW</option>
+  <option value="ZMK">ZMK</option>
+  <option value="$">USD</option>
+  <option value="€">EUR</option>
+</select>
 
 <!-- IMAGE INPUTS -->
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
@@ -44,6 +51,15 @@ img{max-width:100%;border-radius:8px;margin-top:5px}
 let products = [];
 let selectedImage = "";
 
+// Time display
+function updateTime(){
+  const now=new Date();
+  if(document.getElementById("datetime"))
+    document.getElementById("datetime").innerText=now.toLocaleDateString()+" | "+now.toLocaleTimeString();
+}
+setInterval(updateTime,1000); updateTime();
+
+// Camera & Gallery
 function openCamera(){ cameraInput.click(); }
 function openGallery(){ galleryInput.click(); }
 
@@ -56,62 +72,70 @@ function handleImage(e){
   const reader = new FileReader();
   reader.onload = function(ev){
     selectedImage = ev.target.result;
+    const preview = document.getElementById("preview");
     preview.src = selectedImage;
     preview.style.display = "block";
   }
   reader.readAsDataURL(file);
 }
 
+// Add product
 function addProduct(){
-  const name = pname.value;
-  const size = psize.value;
-  const price = pprice.value;
+  const name = pname.value.trim();
+  const size = psize.value.trim();
+  const price = pprice.value.trim();
+  const currency = document.getElementById("pcurrency").value;
 
   if(!name || !size || !price || !selectedImage){
-    alert("Fill all fields & image");
+    alert("Fill all fields & choose image");
     return;
   }
 
   const now = new Date();
   const product = {
-    name,size,price,
-    image:selectedImage,
-    date:now.toLocaleDateString(),
-    time:now.toLocaleTimeString()
+    name, size, price, currency,
+    image: selectedImage,
+    date: now.toLocaleDateString(),
+    time: now.toLocaleTimeString()
   };
 
   products.push(product);
   displayProducts();
 
+  // reset fields
   pname.value=""; psize.value=""; pprice.value="";
-  preview.style.display="none";
-  selectedImage="";
+  preview.style.display="none"; selectedImage="";
 }
 
+// Display product list
 function displayProducts(){
-  productList.innerHTML="";
-  products.forEach(p=>{
-    productList.innerHTML+=`
+  const list = document.getElementById("productList");
+  list.innerHTML="";
+  products.forEach((p,i)=>{
+    list.innerHTML+=`
       <div class="product">
         <b>${p.name}</b><br>
         Size: ${p.size}<br>
-        Price: ${p.price}<br>
+        Price: ${p.price} ${p.currency}<br>
         Date: ${p.date} ${p.time}
         <img src="${p.image}">
       </div>`;
   });
 }
 
+// Send to WhatsApp
 function sendToWhatsApp(){
-  let text="*Vees Thrift Products*%0A%0A";
+  if(products.length===0){ alert("No products added"); return; }
+
+  let text="🛍️ *Vees Thrift Products* 🛍️%0A%0A";
   products.forEach((p,i)=>{
-    text+=`${i+1}. ${p.name}%0ASize: ${p.size}%0APrice: ${p.price}%0ADate: ${p.date} ${p.time}%0A%0A`;
+    text+=`${i+1}. *${p.name}*%0ASize: ${p.size}%0APrice: ${p.price} ${p.currency}%0ADate: ${p.date} ${p.time}%0A%0A`;
   });
 
   window.open(`https://wa.me/?text=${text}`,"_blank");
 }
 
-// SERVICE WORKER
+// Service Worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('service-worker.js');
 }

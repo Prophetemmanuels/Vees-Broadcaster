@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vees Thrift Broadcaster</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f6c1d9">
+
+<style>
+body{font-family:Segoe UI,sans-serif;margin:0;background:linear-gradient(to bottom,#f6c1d9,#fff);padding-bottom:120px;}
+header{text-align:center;padding:15px;background:white;box-shadow:0 2px 6px rgba(0,0,0,.1);}
+#datetime{font-size:14px;color:#555;}
+.container{padding:15px;}
+
+input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc;font-size:14px;}
+button{width:100%;padding:12px;margin-top:8px;border:none;border-radius:25px;background:#d4af37;color:white;font-size:16px;cursor:pointer;}
+
+.product-list{margin-top:15px;background:white;padding:10px;border-radius:10px;max-height:300px;overflow:auto;}
+.item{border-bottom:1px solid #ddd;padding:8px 0;font-size:14px;}
+.item img{width:100%;border-radius:8px;margin-top:5px;}
+.item button{background:red;font-size:12px;padding:4px 8px;width:auto;border-radius:6px;margin-top:5px;}
+
+.send-btn{position:fixed;bottom:15px;left:15px;right:15px;background:#25D366;}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>🛍️ Vees Thrift Broadcaster</h2>
+  <div id="datetime"></div>
+</header>
+
+<div class="container">
+  <input id="pname" placeholder="Product Name">
+  <input id="psize" placeholder="Size">
+  <input id="pprice" type="number" placeholder="Price (ZMW)">
+  <input type="file" id="pimage" accept="image/*" capture="environment">
+  <button onclick="addProduct()">➕ Add Product</button>
+  <div class="product-list" id="list"></div>
+</div>
+
+<button class="send-btn" onclick="sendToWhatsApp()">📢 Send to WhatsApp</button>
+
+<script>
+let products = JSON.parse(localStorage.getItem("products")) || [];
+
+function updateTime(){
+  const now=new Date();
+  datetime.innerText=now.toLocaleDateString()+" | "+now.toLocaleTimeString();
+}
+setInterval(updateTime,1000); updateTime();
+
+function saveProducts(){localStorage.setItem("products",JSON.stringify(products));}
+
+function addProduct(){
+  const name=pname.value, size=psize.value, price=pprice.value, imgInput=pimage;
+  if(!name||!size||!price){alert("Fill all fields");return;}
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    products.push({name,size,price,image:e.target.result,date:new Date().toLocaleDateString(),time:new Date().toLocaleTimeString()});
+    saveProducts(); renderList();
+  }
+  if(imgInput.files[0]) reader.readAsDataURL(imgInput.files[0]);
+
+  pname.value=""; psize.value=""; pprice.value=""; pimage.value="";
+}
+
+function renderList(){
+  list.innerHTML="";
+  products.forEach((p,i)=>{
+    list.innerHTML+=`
+      <div class="item">
+        <b>${p.name}</b><br>
+        Size: ${p.size} | ZMW ${p.price}<br>
+        <small>${p.date} ${p.time}</small>
+        ${p.image?`<img src="${p.image}">`:""}
+        <button onclick="removeProduct(${i})">Remove</button>
+      </div>`;
+  });
+}
+function removeProduct(i){products.splice(i,1);saveProducts();renderList();}
+renderList();
+
+function sendToWhatsApp(){
+  if(products.length===0){alert("No products");return;}
+  let msg="🛍️ *VEES THRIFT NEW ARRIVALS* 🛍️%0A%0A";
+  products.forEach((p,i)=>{
+    msg+=`*${i+1}. ${p.name}*%0ASize: ${p.size}%0APrice: ZMW ${p.price}%0A${p.date} ${p.time}%0A%0A`;
+  });
+  window.open(`https://wa.me/?text=${msg}`);
+}
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
